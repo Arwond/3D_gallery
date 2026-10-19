@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-10-19T20:37:12.120Z",
+  "generatedAt": "2026-10-19T21:54:22.715Z",
   "models": [
     {
-      "id": "byl1",
-      "name": "Byl1",
-      "url": "models/byl1/Byl1.glb",
+      "id": "0001-boba",
+      "name": "0001 Boba",
+      "url": "models/0001-boba/0001_Boba.glb",
       "rotation": [
         -90,
         0,
@@ -12,9 +12,9 @@
       ]
     },
     {
-      "id": "byl2",
-      "name": "Byl2",
-      "url": "models/byl2/byl2.glb",
+      "id": "0002-steampunk",
+      "name": "0002 Steampunk",
+      "url": "models/0002-steampunk/0002_Steampunk.glb",
       "rotation": [
         -90,
         0,
