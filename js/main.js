@@ -197,7 +197,7 @@ function loadModel(entry) {
       (evt) => {
         if (token !== loadToken) return;
         if (evt && evt.lengthComputable && evt.total) {
-          const pct = Math.round((evt.loaded / evt.total) * 100);
+          const pct = Math.min(100, Math.round((evt.loaded / evt.total) * 100)); // capped: gzip makes loaded > total
           showOverlay('Loading ' + entry.name + '... ' + pct + '%');
         }
       },
