@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>3D Model Gallery</title>
+  <meta name="description" content="Browser-based GLB viewer for photogrammetry models.">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.1/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.1/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <header class="toolbar">
+    <h1 class="brand">3D&nbsp;Model&nbsp;Gallery</h1>
+    <div class="control">
+      <label for="model-select">Model</label>
+      <select id="model-select" disabled><option>Loading...</option></select>
+    </div>
+    <div class="control buttons">
+      <button id="btn-rot-x"    type="button" title="Rotate +90 deg around X">Rot X</button>
+      <button id="btn-rot-y"    type="button" title="Rotate +90 deg around Y">Rot Y</button>
+      <button id="btn-rot-z"    type="button" title="Rotate +90 deg around Z">Rot Z</button>
+      <button id="btn-copy-rot" type="button" title="Copy current rotation to clipboard">Copy rot</button>
+      <span class="sep" aria-hidden="true"></span>
+      <button id="btn-reset"      type="button">Reset view</button>
+      <button id="btn-wireframe"  type="button" aria-pressed="false">Wireframe</button>
+      <button id="btn-grid"       type="button" aria-pressed="true">Grid</button>
+      <button id="btn-fullscreen" type="button" aria-pressed="false">Fullscreen</button>
+    </div>
+  </header>
+  <main id="viewport">
+    <div id="info" class="info" hidden></div>
+    <div id="overlay" class="overlay">
+      <div class="spinner" aria-hidden="true"></div>
+      <p id="overlay-text">Loading...</p>
+    </div>
+  </main>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "generatedAt": "2026-10-19T20:37:12.120Z",
+  "models": [
+    {
+      "id": "byl1",
+      "name": "Byl1",
+      "url": "models/byl1/Byl1.glb",
+      "rotation": [
+        -90,
+        0,
+        120
+      ]
+    },
+    {
+      "id": "byl2",
+      "name": "Byl2",
+      "url": "models/byl2/byl2.glb",
+      "rotation": [
+        -90,
+        0,
+        120
+      ]
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "name": "3d-model-gallery-glb",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Three.js GLB gallery for GitHub Pages.",
+  "scripts": {
+    "manifest": "node scripts/build-manifest.mjs",
+    "serve": "npx --yes serve ."
+  }
+}
