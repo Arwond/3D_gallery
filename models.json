@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-23T18:28:16.728Z",
+  "generatedAt": "2026-10-23T19:02:00.284Z",
   "models": [
     {
       "id": "0001-boba",
@@ -15,6 +15,16 @@
       "id": "0002-steampunk",
       "name": "0002 Steampunk",
       "url": "models/0002-steampunk/0002_Steampunk.glb",
+      "rotation": [
+        -90,
+        0,
+        120
+      ]
+    },
+    {
+      "id": "0003-pepper",
+      "name": "0003 Pepper",
+      "url": "models/0003-pepper/0003_pepper.glb",
       "rotation": [
         -90,
         0,
