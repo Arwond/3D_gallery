@@ -6,6 +6,7 @@
   "description": "Three.js GLB gallery for GitHub Pages.",
   "scripts": {
     "manifest": "node scripts/build-manifest.mjs",
+    "thumbs": "node scripts/make-thumbnails.mjs",
     "serve": "npx --yes serve ."
   }
 }

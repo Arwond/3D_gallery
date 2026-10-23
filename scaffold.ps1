@@ -8,6 +8,8 @@
 #   - moves each .glb from the project root into models\<model-id>\
 #   - refreshes models.json (keeps existing names and tuned rotations;
 #     new models get the default rotation [-90, 0, 120])
+#   - renders models\<model-id>\thumb.jpg for every model that needs one
+#     (first loaded view, default rotation) using headless Chrome/Edge
 #
 # What it does NOT do: it never writes index.html, css\, js\, package.json,
 # README.md or any other site file, so your fixes are never overwritten.
@@ -113,6 +115,20 @@ if ($nodeOk -and $manifestTool) {
     }
     Write-Utf8NoBom "models.json" $json
     Write-Host "Wrote models.json with $($entries.Count) model(s)."
+}
+
+# ---- 3. Render thumbnails: models\<id>\thumb.jpg -----------------------
+$thumbTool = Test-Path -LiteralPath "scripts\make-thumbnails.mjs"
+if ($nodeOk -and $thumbTool) {
+    Write-Host ""
+    Write-Host "Rendering thumbnails (headless Chrome/Edge) ..."
+    node scripts/make-thumbnails.mjs
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "warning: thumbnail rendering reported problems."
+        Write-Host "         Models without thumb.jpg show 'No preview' in the gallery."
+    }
+} else {
+    Write-Host "Skipping thumbnails: node or scripts\make-thumbnails.mjs not found."
 }
 
 Write-Host ""

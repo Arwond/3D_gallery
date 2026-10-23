@@ -4,11 +4,32 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 
+// ============================================================
+//  Settings
+// ============================================================
+const PAGE_SIZE = 25;                      // models per gallery page
+const _deg2rad = Math.PI / 180;
+const DEFAULT_ROTATION = [-90, 0, 120];    // used when a models.json entry has no "rotation"
+const rotationOf = (entry) =>
+  (entry && Array.isArray(entry.rotation) && entry.rotation.length === 3) ? entry.rotation : DEFAULT_ROTATION;
+
+// ============================================================
+//  DOM
+// ============================================================
+const galleryView  = document.getElementById('gallery-view');
+const galleryMain  = document.getElementById('gallery-main');
+const galleryGrid  = document.getElementById('gallery-grid');
+const galleryEmpty = document.getElementById('gallery-empty');
+const galleryCount = document.getElementById('gallery-count');
+const pagination   = document.getElementById('pagination');
+
+const viewerView = document.getElementById('viewer-view');
 const viewport   = document.getElementById('viewport');
-const select     = document.getElementById('model-select');
+const modelTitle = document.getElementById('model-title');
 const overlay    = document.getElementById('overlay');
 const overlayTxt = document.getElementById('overlay-text');
 const info       = document.getElementById('info');
+const btnBack    = document.getElementById('btn-back');
 const btnReset   = document.getElementById('btn-reset');
 const btnWire    = document.getElementById('btn-wireframe');
 const btnGrid    = document.getElementById('btn-grid');
@@ -18,19 +39,15 @@ const btnRotY    = document.getElementById('btn-rot-y');
 const btnRotZ    = document.getElementById('btn-rot-z');
 const btnCopyRot = document.getElementById('btn-copy-rot');
 
-const _deg2rad = Math.PI / 180;
-const DEFAULT_ROTATION = [-90, 0, 120];   // used when a models.json entry has no "rotation"
-const rotationOf = (entry) =>
-  (entry && Array.isArray(entry.rotation) && entry.rotation.length === 3) ? entry.rotation : DEFAULT_ROTATION;
-
-// ---------- Renderer ----------
+// ============================================================
+//  3D viewer
+// ============================================================
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 viewport.appendChild(renderer.domElement);
 
-// ---------- Scene ----------
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1c1f24);
 
@@ -42,47 +59,46 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 controls.screenSpacePanning = true;
 
-// ---------- Lights ----------
+// Lights (keep in sync with js/thumb.js so thumbnails look like the viewer)
 scene.add(new THREE.HemisphereLight(0xffffff, 0x444455, 1.1));
 const keyLight  = new THREE.DirectionalLight(0xffffff, 1.6); keyLight.position.set(5, 10, 7);  scene.add(keyLight);
 const fillLight = new THREE.DirectionalLight(0xffffff, 0.5); fillLight.position.set(-6, 3, -5); scene.add(fillLight);
 const rimLight  = new THREE.DirectionalLight(0xffffff, 0.3); rimLight.position.set(0, -5, -3); scene.add(rimLight);
 
-// ---------- Grid ----------
 const grid = new THREE.GridHelper(10, 20, 0x666666, 0x2e3138);
 grid.material.transparent = true;
 grid.material.opacity = 0.8;
 scene.add(grid);
 
-// ---------- Model root ----------
 const modelRoot = new THREE.Group();
 scene.add(modelRoot);
 let currentMesh  = null;
 let currentEntry = null;
 let loadToken    = 0;      // guards against out-of-order loads
 let wireframeOn  = false;
+let viewerActive = false;  // render loop only runs while the viewer is on screen
 
-// ---------- Resize ----------
 // The canvas is sized by CSS (100% x 100%); only the drawing buffer is set here.
 function onResize() {
   const w = viewport.clientWidth, h = viewport.clientHeight;
-  if (!w || !h) return;
+  if (!w || !h) return;                      // viewer hidden
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
 }
 window.addEventListener('resize', onResize);
 if (window.ResizeObserver) new ResizeObserver(onResize).observe(viewport);
-onResize();
 
-// ---------- Render loop ----------
-(function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); })();
+(function animate() {
+  requestAnimationFrame(animate);
+  if (!viewerActive) return;
+  controls.update();
+  renderer.render(scene, camera);
+})();
 
-// ---------- Overlay ----------
 function showOverlay(t) { overlayTxt.textContent = t; overlay.hidden = false; }
 function hideOverlay() { overlay.hidden = true; }
 
-// ---------- Dispose ----------
 function disposeMaterial(m) {
   if (!m) return;
   ['map','normalMap','roughnessMap','metalnessMap','aoMap','emissiveMap','specularMap','bumpMap','alphaMap','displacementMap','envMap']
@@ -105,7 +121,6 @@ function clearModel() {
   info.hidden = true;
 }
 
-// ---------- Framing ----------
 function frameObject(o) {
   const box = new THREE.Box3().setFromObject(o);
   if (box.isEmpty()) return;
@@ -151,8 +166,7 @@ function currentRotationDegrees() {
   return [d(currentMesh.rotation.x), d(currentMesh.rotation.y), d(currentMesh.rotation.z)];
 }
 
-// ---------- Loading (GLB) ----------
-// Draco + Meshopt support, so compressed GLBs (gltf-transform / Zephyr) also work.
+// ---- GLB loading (Draco + Meshopt supported) ----
 const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
 const gltfLoader = new GLTFLoader();
@@ -206,6 +220,15 @@ function loadModel(entry) {
   });
 }
 
+async function openModel(entry) {
+  try { await loadModel(entry); }
+  catch (err) {
+    console.error(err);
+    showOverlay('Failed to load "' + entry.name + '" (' + entry.url + '). ' +
+      'Check the file exists and the name matches exactly, including upper/lower case.');
+  }
+}
+
 function updateInfo(entry, object) {
   let triangles = 0, meshes = 0;
   object.traverse((n) => {
@@ -231,7 +254,7 @@ function updateInfo(entry, object) {
   info.hidden = false;
 }
 
-// ---------- Toolbar ----------
+// ---- Viewer toolbar ----
 btnReset.addEventListener('click', () => {
   if (!currentMesh || !currentEntry) return;
   const r = rotationOf(currentEntry);
@@ -286,44 +309,256 @@ if (!document.fullscreenEnabled) {
   });
 }
 
-// ---------- Init ----------
+// ============================================================
+//  Gallery
+// ============================================================
+let models        = [];
+let manifestStamp = '';
+let renderedPage  = 0;     // gallery page currently built in the DOM (0 = none)
+
+const totalPages = () => Math.max(1, Math.ceil(models.length / PAGE_SIZE));
+const pageHash   = (p) => '#/page/' + p;
+const modelHash  = (id) => '#/model/' + encodeURIComponent(id);
+const pageOfModel = (id) => {
+  const i = models.findIndex((m) => m.id === id);
+  return i < 0 ? 1 : Math.floor(i / PAGE_SIZE) + 1;
+};
+
+// models/<id>/thumb.jpg sits next to the .glb (made by scaffold.ps1)
+function thumbUrl(entry) {
+  const base = entry.thumb || String(entry.url).replace(/[^/]*$/, 'thumb.jpg');
+  return base + (manifestStamp ? '?v=' + encodeURIComponent(manifestStamp) : '');
+}
+
+function makeCard(entry) {
+  const a = document.createElement('a');
+  a.className = 'card';
+  a.href = modelHash(entry.id);
+  a.title = entry.name;
+
+  const box = document.createElement('div');
+  box.className = 'thumb';
+  const img = document.createElement('img');
+  img.loading = 'lazy';
+  img.decoding = 'async';
+  img.alt = entry.name;
+  img.addEventListener('error', () => { img.remove(); box.classList.add('no-thumb'); });
+  img.src = thumbUrl(entry);
+  box.appendChild(img);
+
+  const title = document.createElement('div');
+  title.className = 'card-title';
+  title.textContent = entry.name;
+
+  a.appendChild(box);
+  a.appendChild(title);
+  return a;
+}
+
+// 1 ... 4 5 [6] 7 8 ... 20
+function pageList(cur, total) {
+  const keep = new Set([1, total, cur - 1, cur, cur + 1]);
+  if (cur <= 3) [2, 3, 4].forEach((n) => keep.add(n));
+  if (cur >= total - 2) [total - 3, total - 2, total - 1].forEach((n) => keep.add(n));
+  const nums = [...keep].filter((n) => n >= 1 && n <= total).sort((a, b) => a - b);
+  const out = [];
+  let prev = 0;
+  for (const n of nums) {
+    if (n - prev > 1) out.push('gap');
+    out.push(n);
+    prev = n;
+  }
+  return out;
+}
+
+function renderPagination(cur, total) {
+  pagination.innerHTML = '';
+  if (total <= 1) { pagination.hidden = true; return; }
+  pagination.hidden = false;
+
+  const link = (label, page, extra) => {
+    const a = document.createElement('a');
+    a.href = pageHash(page);
+    a.textContent = label;
+    if (extra) extra(a);
+    pagination.appendChild(a);
+  };
+  const dead = (label) => {
+    const s = document.createElement('span');
+    s.textContent = label;
+    s.setAttribute('aria-disabled', 'true');
+    pagination.appendChild(s);
+  };
+
+  if (cur > 1) link('\u2039 Prev', cur - 1); else dead('\u2039 Prev');
+  for (const item of pageList(cur, total)) {
+    if (item === 'gap') {
+      const s = document.createElement('span');
+      s.className = 'gap';
+      s.textContent = '\u2026';
+      pagination.appendChild(s);
+    } else {
+      link(String(item), item, (a) => {
+        if (item === cur) a.setAttribute('aria-current', 'page');
+        a.setAttribute('aria-label', 'Page ' + item);
+      });
+    }
+  }
+  if (cur < total) link('Next \u203a', cur + 1); else dead('Next \u203a');
+}
+
+function renderGallery(page) {
+  galleryGrid.innerHTML = '';
+  const start = (page - 1) * PAGE_SIZE;
+  const slice = models.slice(start, start + PAGE_SIZE);
+  const frag = document.createDocumentFragment();
+  slice.forEach((m) => frag.appendChild(makeCard(m)));
+  galleryGrid.appendChild(frag);
+  renderPagination(page, totalPages());
+  renderedPage = page;
+  galleryCount.textContent = models.length + ' model' + (models.length === 1 ? '' : 's') +
+    (totalPages() > 1 ? ' | page ' + page + ' of ' + totalPages() : '');
+}
+
+function showGalleryMessage(text) {
+  galleryGrid.innerHTML = '';
+  pagination.hidden = true;
+  galleryCount.textContent = '';
+  galleryEmpty.textContent = text;
+  galleryEmpty.hidden = false;
+  renderedPage = 0;
+}
+
+// ============================================================
+//  Router  (URL hash + browser history)
+//    #/page/3          gallery, page 3
+//    #/model/<id>      one model
+//  Because the page number lives in the URL, the browser Back button
+//  (or mouse back button) from a model returns to the same gallery page,
+//  and the scroll position is restored from the history entry.
+// ============================================================
+let lastKey = null;
+
+function parseHash() {
+  const parts = location.hash.replace(/^#\/?/, '').split('/');
+  try {
+    if (parts[0] === 'model' && parts[1]) {
+      return { view: 'model', id: decodeURIComponent(parts.slice(1).join('/')) };
+    }
+  } catch { /* malformed id -> fall through to gallery */ }
+  if (parts[0] === 'page') {
+    const n = parseInt(parts[1], 10);
+    return { view: 'gallery', page: n > 0 ? n : 1 };
+  }
+  return { view: 'gallery', page: 1 };
+}
+
+function rememberScroll() {
+  if (galleryView.hidden) return;
+  history.replaceState(Object.assign({}, history.state, { app: true, scroll: galleryMain.scrollTop }), '');
+}
+
+function navigate(hash) {
+  if (location.hash === hash) return;
+  rememberScroll();
+  history.pushState({ app: true }, '', hash);
+  route();
+}
+
+function stopViewer() {
+  viewerActive = false;
+  loadToken++;               // cancel any model still loading
+  clearModel();
+  hideOverlay();
+}
+
+function showGallery(page, scroll) {
+  stopViewer();
+  viewerView.hidden = true;
+  galleryView.hidden = false;
+
+  const total = totalPages();
+  const p = Math.min(Math.max(1, page), total);
+  if (p !== page) {                                  // out-of-range page in the URL
+    history.replaceState(history.state, '', pageHash(p));
+    lastKey = location.hash;
+  }
+  if (models.length) {
+    galleryEmpty.hidden = true;
+    if (p !== renderedPage) renderGallery(p);        // coming back to the same page keeps the DOM
+  }
+  galleryMain.scrollTop = scroll || 0;
+  document.title = '3D Model Gallery' + (total > 1 ? ' - page ' + p : '');
+}
+
+function showViewer(entry) {
+  galleryView.hidden = true;
+  viewerView.hidden = false;
+  viewerActive = true;
+  modelTitle.textContent = entry.name;
+  document.title = entry.name + ' - 3D Model Gallery';
+  onResize();
+  if (currentMesh && currentEntry && currentEntry.id === entry.id) return;
+  openModel(entry);
+}
+
+function route() {
+  const key = location.hash;
+  if (key === lastKey) return;                       // popstate + hashchange both fire
+  lastKey = key;
+
+  const r = parseHash();
+  if (r.view === 'model') {
+    const entry = models.find((m) => m.id === r.id);
+    if (entry) { showViewer(entry); return; }
+    history.replaceState(null, '', pageHash(1));     // unknown model id
+    lastKey = location.hash;
+    showGallery(1, 0);
+    return;
+  }
+  const st = history.state;
+  showGallery(r.page, st && st.scroll);
+}
+
+window.addEventListener('popstate', route);
+window.addEventListener('hashchange', route);
+
+// plain clicks are handled in-app; ctrl/middle click still open a new tab
+function onLinkClick(e) {
+  const a = e.target.closest('a[href^="#/"]');
+  if (!a) return;
+  if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  e.preventDefault();
+  navigate(a.getAttribute('href'));
+}
+galleryGrid.addEventListener('click', onLinkClick);
+pagination.addEventListener('click', onLinkClick);
+
+// "Gallery" button in the viewer: behave exactly like the browser Back button
+btnBack.addEventListener('click', () => {
+  if (history.state && history.state.app) { history.back(); return; }
+  const id = currentEntry ? currentEntry.id : parseHash().id;   // opened by direct link
+  navigate(pageHash(pageOfModel(id)));
+});
+
+// ============================================================
+//  Init
+// ============================================================
 async function init() {
   try {
     const res = await fetch('models.json', { cache: 'no-store' });
     if (!res.ok) throw new Error('models.json ' + res.status);
     const manifest = await res.json();
-    const models = Array.isArray(manifest.models) ? manifest.models : [];
-    if (!models.length) throw new Error('No models in models.json');
-
-    select.innerHTML = '';
-    for (const m of models) {
-      const o = document.createElement('option');
-      o.value = m.id;
-      o.textContent = m.name || m.id;
-      select.appendChild(o);
+    models = Array.isArray(manifest.models) ? manifest.models : [];
+    manifestStamp = manifest.generatedAt || '';
+    if (!models.length) {
+      showGalleryMessage('No models yet. Add .glb files and run scaffold.ps1.');
     }
-    select.disabled = false;
-
-    const open = async (entry) => {
-      try { await loadModel(entry); }
-      catch (err) {
-        console.error(err);
-        showOverlay('Failed to load "' + entry.name + '" (' + entry.url + '). ' +
-          'Check the file exists and the name matches exactly, including upper/lower case.');
-      }
-    };
-
-    select.addEventListener('change', () => {
-      const entry = models.find((m) => m.id === select.value);
-      if (entry) open(entry);
-    });
-
-    select.value = models[0].id;
-    await open(models[0]);
   } catch (err) {
     console.error(err);
-    showOverlay('Startup error: ' + (err.message || err));
+    showGalleryMessage('Could not load models.json: ' + (err.message || err));
   }
+  route();
 }
 
 init();
