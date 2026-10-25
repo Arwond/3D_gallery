@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-25T19:33:53.107Z",
+  "generatedAt": "2026-10-25T19:34:41.352Z",
   "models": [
     {
       "id": "0001-cat",
@@ -25,6 +25,16 @@
       "id": "0003-drpepper",
       "name": "0003 Drpepper",
       "url": "models/0003-drpepper/0003_drpepper.glb",
+      "rotation": [
+        -90,
+        0,
+        120
+      ]
+    },
+    {
+      "id": "0004-face",
+      "name": "0004 Face",
+      "url": "models/0004-face/0004_face.glb",
       "rotation": [
         -90,
         0,
