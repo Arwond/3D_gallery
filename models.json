@@ -1,4 +1,35 @@
 {
-  "generatedAt": "2026-10-25T19:00:37.428Z",
-  "models": []
+  "generatedAt": "2026-10-25T19:02:18.503Z",
+  "models": [
+    {
+      "id": "0001-cat",
+      "name": "0001 Cat",
+      "url": "models/0001-cat/0001_cat.glb",
+      "rotation": [
+        -90,
+        0,
+        120
+      ]
+    },
+    {
+      "id": "0002-steampunk",
+      "name": "0002 Steampunk",
+      "url": "models/0002-steampunk/0002_steampunk.glb",
+      "rotation": [
+        -90,
+        0,
+        120
+      ]
+    },
+    {
+      "id": "0003-drpepper",
+      "name": "0003 Drpepper",
+      "url": "models/0003-drpepper/0003_drpepper.glb",
+      "rotation": [
+        -90,
+        0,
+        120
+      ]
+    }
+  ]
 }
