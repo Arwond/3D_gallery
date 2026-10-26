@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-26T15:07:08.352Z",
+  "generatedAt": "2026-10-26T15:27:02.018Z",
   "models": [
     {
       "id": "0001-cat",
@@ -65,16 +65,6 @@
       "id": "0007-drinkdraw2",
       "name": "0007 Drinkdraw2",
       "url": "models/0007-drinkdraw2/0007_drinkdraw2.glb",
-      "rotation": [
-        -90,
-        0,
-        120
-      ]
-    },
-    {
-      "id": "0008-drinkdraw3",
-      "name": "0008 Drinkdraw3",
-      "url": "models/0008-drinkdraw3/0008_drinkdraw3.glb",
       "rotation": [
         -90,
         0,
