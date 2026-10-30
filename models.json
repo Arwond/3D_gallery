@@ -1,95 +1,135 @@
 {
-  "generatedAt": "2026-10-26T15:37:25.726Z",
-  "models": [
-    {
-      "id": "0001-cat",
-      "name": "0001 Cat",
-      "url": "models/0001-cat/0001_cat.glb",
-      "rotation": [
-        -90,
-        0,
-        120
-      ]
-    },
-    {
-      "id": "0002-steampunk",
-      "name": "0002 Steampunk",
-      "url": "models/0002-steampunk/0002_steampunk.glb",
-      "rotation": [
-        -90,
-        0,
-        120
-      ]
-    },
-    {
-      "id": "0003-drpepper",
-      "name": "0003 Drpepper",
-      "url": "models/0003-drpepper/0003_drpepper.glb",
-      "rotation": [
-        -90,
-        0,
-        120
-      ]
-    },
-    {
-      "id": "0004-face",
-      "name": "0004 Face",
-      "url": "models/0004-face/0004_face.glb",
-      "rotation": [
-        -90,
-        0,
-        120
-      ]
-    },
-    {
-      "id": "0005-drpepper2",
-      "name": "0005 Drpepper2",
-      "url": "models/0005-drpepper2/0005_drpepper2.glb",
-      "rotation": [
-        -90,
-        0,
-        120
-      ]
-    },
-    {
-      "id": "0006-drinkdraw",
-      "name": "0006 Drinkdraw",
-      "url": "models/0006-drinkdraw/0006_drinkdraw.glb",
-      "rotation": [
-        -90,
-        0,
-        120
-      ]
-    },
-    {
-      "id": "0007-drinkdraw2",
-      "name": "0007 Drinkdraw2",
-      "url": "models/0007-drinkdraw2/0007_drinkdraw2.glb",
-      "rotation": [
-        -90,
-        0,
-        120
-      ]
-    },
-    {
-      "id": "0008-drinkdraw3",
-      "name": "0008 Drinkdraw3",
-      "url": "models/0008-drinkdraw3/0008_drinkdraw3.glb",
-      "rotation": [
-        -90,
-        0,
-        120
-      ]
-    },
-    {
-      "id": "0009-face2",
-      "name": "0009 Face2",
-      "url": "models/0009-face2/0009_face2.glb",
-      "rotation": [
-        -90,
-        0,
-        120
-      ]
-    }
-  ]
+    "generatedAt":  "2026-10-30T20:45:31.956Z",
+    "models":  [
+                   {
+                       "id":  "0001-cat",
+                       "name":  "0001 Cat",
+                       "url":  "models/0001-cat/0001_cat.glb",
+                       "rotation":  [
+                                        -90,
+                                        0,
+                                        120
+                                    ],
+                       "tags":  [
+                                    "bottle"
+                                ]
+                   },
+                   {
+                       "id":  "0002-steampunk",
+                       "name":  "0002 Steampunk",
+                       "url":  "models/0002-steampunk/0002_steampunk.glb",
+                       "rotation":  [
+                                        -90,
+                                        0,
+                                        120
+                                    ],
+                       "tags":  [
+                                    "bottle"
+                                ]
+                   },
+                   {
+                       "id":  "0003-drpepper",
+                       "name":  "0003 Drpepper",
+                       "url":  "models/0003-drpepper/0003_drpepper.glb",
+                       "rotation":  [
+                                        -90,
+                                        0,
+                                        120
+                                    ],
+                       "tags":  [
+                                    "bottle"
+                                ]
+                   },
+                   {
+                       "id":  "0004-face",
+                       "name":  "0004 Face",
+                       "url":  "models/0004-face/0004_face.glb",
+                       "rotation":  [
+                                        -90,
+                                        0,
+                                        120
+                                    ],
+                       "tags":  [
+                                    "bottle"
+                                ]
+                   },
+                   {
+                       "id":  "0005-drpepper2",
+                       "name":  "0005 Drpepper2",
+                       "url":  "models/0005-drpepper2/0005_drpepper2.glb",
+                       "rotation":  [
+                                        -90,
+                                        0,
+                                        120
+                                    ],
+                       "tags":  [
+                                    "bottle"
+                                ]
+                   },
+                   {
+                       "id":  "0006-drinkdraw",
+                       "name":  "0006 Drinkdraw",
+                       "url":  "models/0006-drinkdraw/0006_drinkdraw.glb",
+                       "rotation":  [
+                                        -90,
+                                        0,
+                                        120
+                                    ],
+                       "tags":  [
+                                    "bottle"
+                                ]
+                   },
+                   {
+                       "id":  "0007-drinkdraw2",
+                       "name":  "0007 Drinkdraw2",
+                       "url":  "models/0007-drinkdraw2/0007_drinkdraw2.glb",
+                       "rotation":  [
+                                        -90,
+                                        0,
+                                        120
+                                    ],
+                       "tags":  [
+                                    "bottle"
+                                ]
+                   },
+                   {
+                       "id":  "0008-drinkdraw3",
+                       "name":  "0008 Drinkdraw3",
+                       "url":  "models/0008-drinkdraw3/0008_drinkdraw3.glb",
+                       "rotation":  [
+                                        -90,
+                                        0,
+                                        120
+                                    ],
+                       "tags":  [
+                                    "bottle"
+                                ]
+                   },
+                   {
+                       "id":  "0009-face2",
+                       "name":  "0009 Face2",
+                       "url":  "models/0009-face2/0009_face2.glb",
+                       "rotation":  [
+                                        -90,
+                                        0,
+                                        120
+                                    ],
+                       "tags":  [
+                                    "bottle"
+                                ]
+                   },
+                   {
+                       "id":  "0010-drinkdraw4",
+                       "name":  "0010 Drinkdraw4",
+                       "url":  "models/0010-drinkdraw4/0010_drinkdraw4.glb",
+                       "rotation":  [
+                                        -90,
+                                        0,
+                                        120
+                                    ],
+                       "tags":  [
+                                    "bottle"
+                                ]
+                   }
+               ]
 }

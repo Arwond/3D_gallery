@@ -1,6 +1,6 @@
 // Regenerate models.json by scanning models/ for .glb files.
 // Run locally:  npm run manifest      (GitHub Pages never runs this)
-// Keeps any custom "name" and "rotation" you already set in models.json.
+// Keeps any custom "name", "rotation" and "tags" you already set in models.json.
 import { readdir, writeFile, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -48,13 +48,19 @@ async function main() {
       ? prev.rotation
       : DEFAULT_ROTATION.slice();
 
-    models.push({
+    const entry = {
       id: d.name,
       name: prev.name || prettyName(d.name),
       // encode so spaces/special characters in file names still load
       url: `${MODELS_DIR}/${encodeURIComponent(d.name)}/${encodeURIComponent(glb)}`,
       rotation,
-    });
+    };
+    // Preserve tags if the entry already had them (including an explicit empty
+    // array meaning "user said no tags"). Omit the field entirely for models
+    // that have never been tagged - scaffold.ps1 prompts for those.
+    if (Array.isArray(prev.tags)) entry.tags = prev.tags;
+
+    models.push(entry);
   }
 
   models.sort((a, b) => a.name.localeCompare(b.name));

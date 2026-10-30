@@ -13,6 +13,12 @@ const DEFAULT_ROTATION = [-90, 0, 120];    // used when a models.json entry has 
 const rotationOf = (entry) =>
   (entry && Array.isArray(entry.rotation) && entry.rotation.length === 3) ? entry.rotation : DEFAULT_ROTATION;
 
+const hasTag = (entry, tag) => {
+  if (!entry || !Array.isArray(entry.tags) || !tag) return false;
+  const t = String(tag).toLowerCase();
+  return entry.tags.some((x) => String(x).toLowerCase() === t);
+};
+
 // ============================================================
 //  DOM
 // ============================================================
@@ -22,6 +28,9 @@ const galleryGrid  = document.getElementById('gallery-grid');
 const galleryEmpty = document.getElementById('gallery-empty');
 const galleryCount = document.getElementById('gallery-count');
 const pagination   = document.getElementById('pagination');
+const galleryFilter      = document.getElementById('gallery-filter');
+const galleryFilterTag   = document.getElementById('gallery-filter-tag');
+const galleryFilterClear = document.getElementById('gallery-filter-clear');
 
 const viewerView = document.getElementById('viewer-view');
 const viewport   = document.getElementById('viewport');
@@ -59,7 +68,7 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 controls.screenSpacePanning = true;
 
-// Lights (keep in sync with js/thumb.js so thumbnails look like the viewer)
+// Lights (keep in sync with tools/thumb.js so thumbnails look like the viewer)
 scene.add(new THREE.HemisphereLight(0xffffff, 0x444455, 1.1));
 const keyLight  = new THREE.DirectionalLight(0xffffff, 1.6); keyLight.position.set(5, 10, 7);  scene.add(keyLight);
 const fillLight = new THREE.DirectionalLight(0xffffff, 0.5); fillLight.position.set(-6, 3, -5); scene.add(fillLight);
@@ -229,6 +238,12 @@ async function openModel(entry) {
   }
 }
 
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => (
+    {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
+  ));
+}
+
 function updateInfo(entry, object) {
   let triangles = 0, meshes = 0;
   object.traverse((n) => {
@@ -241,16 +256,23 @@ function updateInfo(entry, object) {
   const box  = new THREE.Box3().setFromObject(object);
   const size = box.getSize(new THREE.Vector3());
   const rot  = currentRotationDegrees();
-  const safe = String(entry.name).replace(/[&<>"']/g, (c) => (
-    {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
-  ));
+
+  const tagsHtml = (entry.tags && entry.tags.length)
+    ? '<div class="info-row info-tags">' +
+      entry.tags.map((t) =>
+        '<a class="tag-chip" href="' + galleryHash(t, 1) + '">#' + escapeHtml(t) + '</a>'
+      ).join('') +
+      '</div>'
+    : '';
+
   info.innerHTML =
-    '<div class="info-title">' + safe + '</div>' +
+    '<div class="info-title">' + escapeHtml(entry.name) + '</div>' +
     '<div class="info-row">' + meshes + ' mesh' + (meshes === 1 ? '' : 'es') +
     ' | ' + Math.round(triangles).toLocaleString() + ' triangles</div>' +
     '<div class="info-row">Size ' + size.x.toFixed(2) + ' x ' +
     size.y.toFixed(2) + ' x ' + size.z.toFixed(2) + '</div>' +
-    '<div class="info-row">Rotation ' + rot[0] + ', ' + rot[1] + ', ' + rot[2] + ' (deg)</div>';
+    '<div class="info-row">Rotation ' + rot[0] + ', ' + rot[1] + ', ' + rot[2] + ' (deg)</div>' +
+    tagsHtml;
   info.hidden = false;
 }
 
@@ -312,12 +334,17 @@ if (!document.fullscreenEnabled) {
 // ============================================================
 //  Gallery
 // ============================================================
-let models        = [];
+let models        = [];       // all models from models.json
 let manifestStamp = '';
-let renderedPage  = 0;     // gallery page currently built in the DOM (0 = none)
+let activeTag     = null;     // null = unfiltered; otherwise filter by this tag
+let currentList   = [];       // models currently visible (== models, or filtered by activeTag)
+let renderedPage  = 0;        // gallery page currently built in the DOM (0 = none)
+let renderedTag   = null;     // activeTag for the currently built DOM
 
-const totalPages = () => Math.max(1, Math.ceil(models.length / PAGE_SIZE));
+const totalPages = () => Math.max(1, Math.ceil(currentList.length / PAGE_SIZE));
 const pageHash   = (p) => '#/page/' + p;
+const tagHash    = (tag, p) => '#/tag/' + encodeURIComponent(tag) + '/page/' + p;
+const galleryHash = (tag, page) => tag ? tagHash(tag, page) : pageHash(page);
 const modelHash  = (id) => '#/model/' + encodeURIComponent(id);
 const pageOfModel = (id) => {
   const i = models.findIndex((m) => m.id === id);
@@ -331,10 +358,13 @@ function thumbUrl(entry) {
 }
 
 function makeCard(entry) {
-  const a = document.createElement('a');
-  a.className = 'card';
-  a.href = modelHash(entry.id);
-  a.title = entry.name;
+  const card = document.createElement('div');
+  card.className = 'card';
+
+  const link = document.createElement('a');
+  link.className = 'card-main';
+  link.href = modelHash(entry.id);
+  link.title = entry.name;
 
   const box = document.createElement('div');
   box.className = 'thumb';
@@ -345,14 +375,29 @@ function makeCard(entry) {
   img.addEventListener('error', () => { img.remove(); box.classList.add('no-thumb'); });
   img.src = thumbUrl(entry);
   box.appendChild(img);
+  link.appendChild(box);
 
   const title = document.createElement('div');
   title.className = 'card-title';
   title.textContent = entry.name;
+  link.appendChild(title);
 
-  a.appendChild(box);
-  a.appendChild(title);
-  return a;
+  card.appendChild(link);
+
+  if (Array.isArray(entry.tags) && entry.tags.length) {
+    const tagsRow = document.createElement('div');
+    tagsRow.className = 'card-tags';
+    entry.tags.forEach((tag) => {
+      const a = document.createElement('a');
+      a.className = 'tag-chip';
+      a.href = galleryHash(tag, 1);
+      a.textContent = '#' + tag;
+      tagsRow.appendChild(a);
+    });
+    card.appendChild(tagsRow);
+  }
+
+  return card;
 }
 
 // 1 ... 4 5 [6] 7 8 ... 20
@@ -378,7 +423,7 @@ function renderPagination(cur, total) {
 
   const link = (label, page, extra) => {
     const a = document.createElement('a');
-    a.href = pageHash(page);
+    a.href = galleryHash(activeTag, page);
     a.textContent = label;
     if (extra) extra(a);
     pagination.appendChild(a);
@@ -410,13 +455,14 @@ function renderPagination(cur, total) {
 function renderGallery(page) {
   galleryGrid.innerHTML = '';
   const start = (page - 1) * PAGE_SIZE;
-  const slice = models.slice(start, start + PAGE_SIZE);
+  const slice = currentList.slice(start, start + PAGE_SIZE);
   const frag = document.createDocumentFragment();
   slice.forEach((m) => frag.appendChild(makeCard(m)));
   galleryGrid.appendChild(frag);
   renderPagination(page, totalPages());
   renderedPage = page;
-  galleryCount.textContent = models.length + ' model' + (models.length === 1 ? '' : 's') +
+  renderedTag  = activeTag;
+  galleryCount.textContent = currentList.length + ' model' + (currentList.length === 1 ? '' : 's') +
     (totalPages() > 1 ? ' | page ' + page + ' of ' + totalPages() : '');
 }
 
@@ -427,30 +473,40 @@ function showGalleryMessage(text) {
   galleryEmpty.textContent = text;
   galleryEmpty.hidden = false;
   renderedPage = 0;
+  renderedTag  = activeTag;
 }
 
 // ============================================================
 //  Router  (URL hash + browser history)
-//    #/page/3          gallery, page 3
-//    #/model/<id>      one model
-//  Because the page number lives in the URL, the browser Back button
-//  (or mouse back button) from a model returns to the same gallery page,
-//  and the scroll position is restored from the history entry.
+//    #/page/3                  gallery, page 3 (all models)
+//    #/tag/sculpture/page/2    gallery filtered by tag #sculpture, page 2
+//    #/model/<id>              one model
+//  Because the page number and the active tag live in the URL, the browser
+//  Back button (or mouse back button) from a model returns to the exact
+//  gallery page and scroll position the model was opened from.
 // ============================================================
 let lastKey = null;
 
 function parseHash() {
-  const parts = location.hash.replace(/^#\/?/, '').split('/');
+  const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   try {
     if (parts[0] === 'model' && parts[1]) {
       return { view: 'model', id: decodeURIComponent(parts.slice(1).join('/')) };
     }
   } catch { /* malformed id -> fall through to gallery */ }
-  if (parts[0] === 'page') {
-    const n = parseInt(parts[1], 10);
-    return { view: 'gallery', page: n > 0 ? n : 1 };
+
+  let tag = null;
+  let page = 1;
+  let i = 0;
+  if (parts[i] === 'tag' && parts[i + 1]) {
+    try { tag = decodeURIComponent(parts[i + 1]); } catch { tag = parts[i + 1]; }
+    i += 2;
   }
-  return { view: 'gallery', page: 1 };
+  if (parts[i] === 'page') {
+    const n = parseInt(parts[i + 1], 10);
+    page = n > 0 ? n : 1;
+  }
+  return { view: 'gallery', tag, page };
 }
 
 function rememberScroll() {
@@ -472,23 +528,45 @@ function stopViewer() {
   hideOverlay();
 }
 
-function showGallery(page, scroll) {
+function showGallery(tag, page, scroll) {
   stopViewer();
   viewerView.hidden = true;
   galleryView.hidden = false;
 
+  activeTag = tag || null;
+  currentList = activeTag ? models.filter((m) => hasTag(m, activeTag)) : models;
+
   const total = totalPages();
   const p = Math.min(Math.max(1, page), total);
   if (p !== page) {                                  // out-of-range page in the URL
-    history.replaceState(history.state, '', pageHash(p));
+    history.replaceState(history.state, '', galleryHash(activeTag, p));
     lastKey = location.hash;
   }
-  if (models.length) {
-    galleryEmpty.hidden = true;
-    if (p !== renderedPage) renderGallery(p);        // coming back to the same page keeps the DOM
+
+  // filter banner
+  if (activeTag) {
+    galleryFilter.hidden = false;
+    galleryFilterTag.textContent = '#' + activeTag;
+    galleryFilterClear.href = pageHash(1);
+  } else {
+    galleryFilter.hidden = true;
   }
+
+  if (currentList.length) {
+    galleryEmpty.hidden = true;
+    if (p !== renderedPage || activeTag !== renderedTag) renderGallery(p);
+  } else {
+    showGalleryMessage(
+      activeTag
+        ? 'No models tagged #' + activeTag + '.'
+        : 'No models yet. Add .glb files and run scaffold.ps1.'
+    );
+  }
+
   galleryMain.scrollTop = scroll || 0;
-  document.title = '3D Model Gallery' + (total > 1 ? ' - page ' + p : '');
+  document.title = '3D Model Gallery' +
+    (activeTag ? ' - #' + activeTag : '') +
+    (total > 1 ? ' - page ' + p : '');
 }
 
 function showViewer(entry) {
@@ -513,11 +591,11 @@ function route() {
     if (entry) { showViewer(entry); return; }
     history.replaceState(null, '', pageHash(1));     // unknown model id
     lastKey = location.hash;
-    showGallery(1, 0);
+    showGallery(null, 1, 0);
     return;
   }
   const st = history.state;
-  showGallery(r.page, st && st.scroll);
+  showGallery(r.tag, r.page, st && st.scroll);
 }
 
 window.addEventListener('popstate', route);
@@ -531,8 +609,8 @@ function onLinkClick(e) {
   e.preventDefault();
   navigate(a.getAttribute('href'));
 }
-galleryGrid.addEventListener('click', onLinkClick);
-pagination.addEventListener('click', onLinkClick);
+galleryMain.addEventListener('click', onLinkClick);   // cards, tag chips, pagination, filter-clear
+info.addEventListener('click', onLinkClick);          // tag chips in the viewer info panel
 
 // "Gallery" button in the viewer: behave exactly like the browser Back button
 btnBack.addEventListener('click', () => {

@@ -26,6 +26,11 @@
     </header>
     <main id="gallery-main">
       <div class="gallery-inner">
+        <div id="gallery-filter" class="gallery-filter" hidden>
+          <span class="gallery-filter-label">Showing models tagged</span>
+          <span id="gallery-filter-tag" class="tag-chip tag-chip-static"></span>
+          <a id="gallery-filter-clear" class="gallery-filter-clear" href="#/page/1">Show all</a>
+        </div>
         <div id="gallery-grid" class="grid"></div>
         <p id="gallery-empty" class="empty" hidden></p>
         <nav id="pagination" class="pagination" aria-label="Gallery pages" hidden></nav>

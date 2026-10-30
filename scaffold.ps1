@@ -3,17 +3,24 @@
 # Usage:
 #   1. Copy one or more .glb files into THIS folder (the project root).
 #   2. Run:  .\scaffold.ps1
+#      or:  .\scaffold.ps1 -NoPrompt     (skip tag prompts)
 #
 # What it does:
 #   - moves each .glb from the project root into models\<model-id>\
-#   - refreshes models.json (keeps existing names and tuned rotations;
+#   - refreshes models.json (keeps existing names, rotations and tags;
 #     new models get the default rotation [-90, 0, 120])
+#   - prompts for hashtags on every model that does not have a "tags" field
+#     yet - including models added before this feature existed
 #   - renders models\<model-id>\thumb.jpg for every model that needs one
 #     (first loaded view, default rotation) using headless Chrome/Edge
 #
 # What it does NOT do: it never writes index.html, css\, js\, package.json,
 # README.md or any other site file, so your fixes are never overwritten.
 # Safe to run any number of times.
+param(
+    [switch]$NoPrompt
+)
+
 $ErrorActionPreference = 'Stop'
 [Environment]::CurrentDirectory = $PWD.Path
 
@@ -27,6 +34,16 @@ function Write-Utf8NoBom {
         New-Item -ItemType Directory -Path $dir -Force | Out-Null
     }
     [System.IO.File]::WriteAllText($fullPath, $Content, [System.Text.UTF8Encoding]::new($false))
+}
+
+function Normalize-Tag {
+    param([string]$Raw)
+    if ([string]::IsNullOrWhiteSpace($Raw)) { return $null }
+    $t = $Raw.Trim().TrimStart('#').ToLowerInvariant()
+    $t = $t -replace '\s+', '-'
+    $t = $t -replace '[^a-z0-9_-]', ''
+    if ([string]::IsNullOrWhiteSpace($t)) { return $null }
+    return $t
 }
 
 if (-not (Test-Path -LiteralPath "index.html")) {
@@ -117,7 +134,63 @@ if ($nodeOk -and $manifestTool) {
     Write-Host "Wrote models.json with $($entries.Count) model(s)."
 }
 
-# ---- 3. Render thumbnails: models\<id>\thumb.jpg -----------------------
+# ---- 3. Tag prompt: every model without a "tags" field ----------------
+# Reading and updating is done in-memory, then written back as UTF-8 (no BOM).
+if (Test-Path -LiteralPath "models.json") {
+    try {
+        $raw  = Get-Content "models.json" -Raw
+        $data = $raw | ConvertFrom-Json
+
+        $needsTags = @()
+        foreach ($m in @($data.models)) {
+            if ($null -eq $m) { continue }
+            if ($null -eq $m.tags) { $needsTags += $m }
+        }
+
+        if ($needsTags.Count -gt 0) {
+            if ($NoPrompt) {
+                Write-Host ""
+                Write-Host "Skipping tag prompt (-NoPrompt): $($needsTags.Count) model(s) still untagged."
+            } else {
+                Write-Host ""
+                Write-Host "Tagging $($needsTags.Count) model(s) that do not have tags yet."
+                Write-Host "Enter hashtags separated by commas, e.g.: sculpture, artifact, stone"
+                Write-Host "The '#' is optional. Spaces inside a tag become hyphens."
+                Write-Host "Leave blank to mark the model as intentionally untagged."
+                Write-Host ""
+
+                foreach ($m in $needsTags) {
+                    Write-Host ("  {0}   [{1}]" -f $m.name, $m.id)
+                    $raw2 = Read-Host "    #"
+                    $tags = @()
+                    if (-not [string]::IsNullOrWhiteSpace($raw2)) {
+                        $tags = @(
+                            $raw2 -split ',' |
+                            ForEach-Object { Normalize-Tag $_ } |
+                            Where-Object { $_ } |
+                            Select-Object -Unique
+                        )
+                    }
+                    $m | Add-Member -NotePropertyName tags -NotePropertyValue $tags -Force
+                    if ($tags.Count -gt 0) {
+                        Write-Host ("    -> " + ($tags -join ', '))
+                    } else {
+                        Write-Host "    -> (no tags)"
+                    }
+                    Write-Host ""
+                }
+
+                $out = ($data | ConvertTo-Json -Depth 10) + "`n"
+                Write-Utf8NoBom "models.json" $out
+                Write-Host "Updated models.json with tags."
+            }
+        }
+    } catch {
+        Write-Host "warning: could not process tags in models.json: $_"
+    }
+}
+
+# ---- 4. Render thumbnails: models\<id>\thumb.jpg -----------------------
 $thumbTool = Test-Path -LiteralPath "scripts\make-thumbnails.mjs"
 if ($nodeOk -and $thumbTool) {
     Write-Host ""
